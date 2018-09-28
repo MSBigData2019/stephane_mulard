@@ -51,7 +51,7 @@ def occurences(text):
 def length_words(array):
 
     #return [len(x) for x in array]
-    return map(len(array),array)
+    return list(map(len,array))
 
 
 #Write a function that takes a number and returns a list of its digits.
@@ -63,7 +63,24 @@ def number2digits(number):
 #English is translated to Pig Latin by taking the first letter of every word,
 #moving it to the end of the word and adding 'ay'
 def pigLatin(text):
-  return
+
+    listeMots = text.split(" ")
+    liste2 = list(map(lambda x : x[1:] + x[0].lower() + "ay" , listeMots))
+    liste2[0] = liste2[0].title()
+    return " ".join(liste2)
+
+    # result = ""
+    # premier = True
+    # for mot in listeMots:
+    #     if premier:
+    #         mot = mot[1].upper() + mot[2:] + mot[0].lower() + "ay"
+    #         premier = False
+    #     else:
+    #         mot = mot[1:] + mot[0] + "ay"
+    #
+    #     result = result + mot + " "
+    # return result[:-1]
+
 
 
 #write fizbuzz programm
@@ -124,8 +141,9 @@ def flatten():
         computed_record = {}
         computed_record['timestamp'] = record["record_timestamp"]
         computed_record['auteur'] = record["fields"]["auteur"]
-
-    return
+        computed_record['nombre_de_reservations'] = record["fields"]["nombre_de_reservations"]
+        results.append(computed_record)
+    return results
 
 
 
