@@ -46,7 +46,7 @@ def get_popularity_for_people(people):
 
 class Lesson1Tests(unittest.TestCase):
     def testShareCount(self):
-        self.assertEqual(get_share_count_for_page("http://www.purepeople.com/article/brigitte-macron-decroche-une-jolie-couv-a-l-etranger_a306389/1") , 122)
+        self.assertEqual(get_share_count_for_page("http://www.purepeople.com/article/brigitte-macron-decroche-une-jolie-couv-a-l-etranger_a306389/1") , 177)
 
     def testConvertStringInt(self):
         self.assertEqual(_convert_string_to_int("\n                            122\n                    ") , 122)
