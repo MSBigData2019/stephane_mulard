@@ -13,23 +13,6 @@
 # pour les sociétés suivantes : Aribus, LVMH et Danone.
 # Un exemple de page https://www.reuters.com/finance/stocks/financial-highlights/LVMH.PA.
 
-url_LVMH = "https://www.reuters.com/finance/stocks/financial-highlights/LVMH.PA"
-url_Airbus = "https://www.reuters.com/finance/stocks/financial-highlights/AIR.PA"
-url_Danone = "https://www.reuters.com/finance/stocks/financial-highlights/DANO.PA"
-
-cssClass_vente_action = "sectionQuote nasdaqChange/sectionQuoteDetail/span sans classe"
-cssClass_pourcent_changement = "sectionQuote priceChange/sectionQuoteDetail/valueContent/valueContentPercent"
-
-#ventes au quartier
-#Chaine "SALES (in millions)" TD class dataTitle, à l'intérieur chaine "Quarter Ending Dec-18" dans TD class stripe
-#Données dans siblings TD class data, puis sélection 2, 3 ou 4 poour mean, high, low
-
-#% share owned
-#Chaine  "% Shares Owned", sibling TD class data pour la valeur en %
-
-#dividend yield
-#chaine exacte Dividend Yield dans TD puis 3 sibling TD class data pour les 3 valeurs
-
 import requests
 import unittest
 from bs4 import BeautifulSoup
@@ -38,6 +21,7 @@ from pprint import pprint
 from locale import *
 from numpy import nan as NA
 import pandas as pd
+
 
 def Get_Request_From_Company_and_Build_Soup(company):
     request = requests.get("https://www.reuters.com/finance/stocks/financial-highlights/" +  company)
@@ -136,6 +120,9 @@ def Convert_To_Int_Or_Nan(string):
     else:
         return NA
 
+# -------------------------------------------------------------------------- #
+
+
 CompaniesDict = {"LVMH" :"LVMH.PA", "Airbus" :"AIR.PA", "Danone" : "DANO.PA"}
 CompaniesDataDict = {}
 
@@ -165,10 +152,6 @@ for company in CompaniesDict.items():
 CompaniesDataDF = pd.DataFrame( CompaniesDataDict,
                                 index = InformationIndex)
 print(CompaniesDataDF)
-
-
-# pprint(soup_LVMH.find("strong", text=pattern).__dict__)
-# pprint(soup_LVMH.find(text=pattern).parent.__dict__)
 
 
 class CrawlerTests(unittest.TestCase):
