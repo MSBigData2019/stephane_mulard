@@ -35,66 +35,149 @@ import unittest
 from bs4 import BeautifulSoup
 import re
 from pprint import pprint
-import locale
+from locale import *
+from numpy import nan as NA
+import pandas as pd
 
-page_LVMH = requests.get("https://www.reuters.com/finance/stocks/financial-highlights/LVMH.PA")
+def Get_Request_From_Company_and_Build_Soup(company):
+    request = requests.get("https://www.reuters.com/finance/stocks/financial-highlights/" +  company)
+    if request.status_code == 200:
+        html_doc = request.text
+        soup = BeautifulSoup(html_doc, "html.parser")
+        return soup
+    else:
+        print("The website is not responding or the company " + company + " is not found")
 
-if page_LVMH.status_code == 200:
-    html_LVMH = page_LVMH.text
-    soup_LVMH = BeautifulSoup(html_LVMH, "html.parser")
 
-#print(soup_LVMH.find("strong", text="Shares Owned")) #ne fonctionne pas
+def Get_Share_Price_And_Percent_Change_From_Soup(soup):
+    # Share price
+    SharePrice = soup.find("span", class_="nasdaqChangeHeader").findNext("span").text.strip()
+    SharePrice = Convert_To_Float_With_Comma_Or_Nan(SharePrice)
 
-print("Info LVMH")
+    # Percent change
+    SharePercentChange = soup.find("span", class_="valueContentPercent").findNext("span").text.strip()
+    SharePercentChange = re.sub('[()]', '', SharePercentChange)[:-1]
+    SharePercentChange = Convert_To_Float_Or_Nan(SharePercentChange)
 
-#ventes au quartier à fin décembre 2018
-SalesTag = soup_LVMH.find(lambda tag:tag.name=="td" and "Quarter Ending Dec-18" in tag.text)
-SalesListValues = list(SalesTag.parent.children)
-SalesNbEstimate = SalesListValues[3].text
-SalesMean = SalesListValues[5].text
-SalesHigh = SalesListValues[7].text
-SalesLow = SalesListValues[7].text
+    return [SharePrice, SharePercentChange]
 
-print("Vente au quartier à fin dec. 2018 :")
-print("Nb estimate : " + SalesNbEstimate)
-print("Mean : " + SalesMean)
-print("High : " + SalesHigh)
-print("Low : " + str(SalesLow))
+def Get_Quarter_Sales_End_Dec2018_From_Soup(soup):
 
-#setlocale(LC_NUMERIC,"")
-#print("Low2 : " + str(locale.atof(SalesLow)))
+    SalesTag = soup.find(lambda tag: tag.name == "td" and "Quarter Ending Dec-18" in tag.text)
+    SalesValuesTag = list(SalesTag.parent.children)
 
-#Shares Owned
-SharesOwnedTag = soup_LVMH.find(lambda tag:tag.name=="strong" and "Shares Owned" in tag.text)
-SharesOwnedValueString = list(SharesOwnedTag.parent.parent.children)[3].text
-#SharesOwnedValue = float(SharesOwnedValueString[:-1])
-print("% Shares Owned des investisseurs : " + str(SharesOwnedValueString))
+    SalesNbEstimate = SalesValuesTag[3].text
+    SalesMean = SalesValuesTag[5].text
+    SalesHigh = SalesValuesTag[7].text
+    SalesLow = SalesValuesTag[9].text
+    Sales1YearAgo = SalesValuesTag[11].text
 
-# pattern = re.compile(r'Shares')
-# print(soup_LVMH.find("strong", text=pattern))
+    SalesNbEstimate = Convert_To_Int_Or_Nan(SalesNbEstimate)
+    SalesMean = Convert_To_Float_With_Comma_Or_Nan(SalesMean)
+    SalesHigh = Convert_To_Float_With_Comma_Or_Nan(SalesHigh)
+    SalesLow = Convert_To_Float_With_Comma_Or_Nan(SalesLow)
+    Sales1YearAgo = Convert_To_Float_With_Comma_Or_Nan(Sales1YearAgo)
+
+    return [SalesNbEstimate, SalesMean, SalesHigh, SalesLow, Sales1YearAgo]
+
+
+def Get_Percent_Shares_Owned_From_Soup(soup):
+    # Alternative :
+    # SharesOwnedTag = soup_LVMH.find(lambda tag: tag.name == "strong" and "Shares Owned" in tag.text)
+    # SharesOwned = list(SharesOwnedTag.parent.parent.children)[3].text
+
+    pattern = re.compile(r'Shares Owned')
+    SharesOwned = soup.find("td", text=pattern).findNext("td").text[:-1]
+
+    SharesOwned = Convert_To_Float_Or_Nan(SharesOwned)
+
+    return [SharesOwned]
+
+
+def Get_Dividend_Yield_From_Soup(soup):
+    DividendTag = soup.find(lambda tag: tag.name == "td" and "Dividend Yield" in tag.text)
+    DividendValuesTag = list(DividendTag.parent.children)
+    DividendCompany = DividendValuesTag[3].text
+    DividendIndustry = DividendValuesTag[5].text
+    DividendSector = DividendValuesTag[7].text
+
+    DividendCompany = Convert_To_Float_Or_Nan(DividendCompany)
+    DividendIndustry = Convert_To_Float_Or_Nan(DividendIndustry)
+    DividendSector = Convert_To_Float_Or_Nan(DividendSector)
+
+    return [DividendCompany, DividendIndustry, DividendSector]
+
+
+def Convert_To_Float_Or_Nan(string):
+    if string is not "" and string != "--":
+        return float(string)
+    else:
+        return NA
+
+
+def Convert_To_Float_With_Comma_Or_Nan(string):
+    # Use locale to convert string to float when comma separator for thousands are present
+    # alternative  : remove the "," character and cast to float
+    setlocale(LC_NUMERIC, "en_GB")
+
+    if string is not "" and string != "--":
+        floatNb = atof(string)
+
+        # returning to local locale
+        setlocale(LC_NUMERIC, "")
+
+        return floatNb
+    else:
+        return NA
+
+def Convert_To_Int_Or_Nan(string):
+    if string is not "" and string != "--":
+        return int(string)
+    else:
+        return NA
+
+CompaniesDict = {"LVMH" :"LVMH.PA", "Airbus" :"AIR.PA", "Danone" : "DANO.PA"}
+CompaniesDataDict = {}
+
+InformationIndex = ["Sales - #Estimates",
+                    "Sales - Mean",
+                    "Sales - High",
+                    "Sales - Low",
+                    "Sales - 1 Year Ago",
+                    "Share price",
+                    "Share percent change",
+                    "% Shares owned",
+                    "Dividend yield company",
+                    "Dividend yield Industry",
+                    "Dividend yield Sector"]
+
+for company in CompaniesDict.items():
+
+    soup = Get_Request_From_Company_and_Build_Soup(company[1])
+
+    CompanyData = Get_Quarter_Sales_End_Dec2018_From_Soup(soup)
+    CompanyData = CompanyData + Get_Share_Price_And_Percent_Change_From_Soup(soup)
+    CompanyData = CompanyData + Get_Percent_Shares_Owned_From_Soup(soup)
+    CompanyData = CompanyData + Get_Dividend_Yield_From_Soup(soup)
+
+    CompaniesDataDict[company[0]] = CompanyData
+
+CompaniesDataDF = pd.DataFrame( CompaniesDataDict,
+                                index = InformationIndex)
+print(CompaniesDataDF)
+
+
 # pprint(soup_LVMH.find("strong", text=pattern).__dict__)
-#pprint(soup_LVMH.find(text=pattern).parent.__dict__)
-#print(soup_LVMH(text=pattern))
-
-#dividend yield
-DividendTag = soup_LVMH.find(lambda tag:tag.name=="td" and "Dividend Yield" in tag.text)
-DividendListValue = list(DividendTag.parent.children)
-DividendTagCompany = DividendListValue[3].text
-DividendTagIndustry = DividendListValue[5].text
-DividendTagSector = DividendListValue[7].text
-
-print("Dividend Yield company : " + DividendTagCompany)
-print("Dividend Yield industry : " + DividendTagIndustry)
-print("Dividend Yield sector : " + DividendTagSector)
+# pprint(soup_LVMH.find(text=pattern).parent.__dict__)
 
 
+class CrawlerTests(unittest.TestCase):
+    def testConvToFloatWithComma(self):
+        self.assertEqual(Convert_To_Float_With_Comma_Or_Nan("123,456.7"), 123456.7)
+        #self.assertEqual(Convert_To_Float_With_Comma_Or_Nan(""), NA)
 
-# class Lesson1Tests(unittest.TestCase):
-#     def test(self):
-#         self.assertEqual("", "")
-#
-# def main():
-#     unittest.main()
-#
-# if __name__ == '__main__':
-#     main()
+def main():
+    unittest.main()
+
+if __name__ == '__main__':
+    main()
