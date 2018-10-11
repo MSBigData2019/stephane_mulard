@@ -15,15 +15,16 @@
 
 import requests
 import unittest
-from bs4 import BeautifulSoup
 import re
+import pandas as pd
 from pprint import pprint
 from locale import *
 from numpy import nan as NA
-import pandas as pd
+from bs4 import BeautifulSoup
+from datetime import datetime
 
 
-def Get_Request_From_Company_and_Build_Soup(company):
+def get_request_from_company_and_build_soup(company):
     request = requests.get("https://www.reuters.com/finance/stocks/financial-highlights/" +  company)
     if request.status_code == 200:
         html_doc = request.text
@@ -33,39 +34,39 @@ def Get_Request_From_Company_and_Build_Soup(company):
         print("The website is not responding or the company " + company + " is not found")
 
 
-def Get_Share_Price_And_Percent_Change_From_Soup(soup):
+def get_share_price_and_percent_change_from_soup(soup):
     # Share price
-    SharePrice = soup.find("span", class_="nasdaqChangeHeader").findNext("span").text.strip()
-    SharePrice = Convert_To_Float_With_Comma_Or_Nan(SharePrice)
+    share_price = soup.find("span", class_="nasdaqChangeHeader").findNext("span").text.strip()
+    share_price = _convert_string_to_float_or_nan(share_price)
 
     # Percent change
-    SharePercentChange = soup.find("span", class_="valueContentPercent").findNext("span").text.strip()
-    SharePercentChange = re.sub('[()]', '', SharePercentChange)[:-1]
-    SharePercentChange = Convert_To_Float_Or_Nan(SharePercentChange)
+    share_percent_change = soup.find("span", class_="valueContentPercent").findNext("span").text.strip()
+    share_percent_change = re.sub('[()]', '', share_percent_change)[:-1]
+    share_percent_change = _convert_string_to_float_or_nan(share_percent_change)
 
-    return [SharePrice, SharePercentChange]
+    return [share_price, share_percent_change]
 
-def Get_Quarter_Sales_End_Dec2018_From_Soup(soup):
+def get_quarter_sales_end_dec2018_from_soup(soup):
 
-    SalesTag = soup.find(lambda tag: tag.name == "td" and "Quarter Ending Dec-18" in tag.text)
-    SalesValuesTag = list(SalesTag.parent.children)
+    sales_tag = soup.find(lambda tag: tag.name == "td" and "Quarter Ending Dec-18" in tag.text)
+    sales_values_tag = list(sales_tag.parent.children)
 
-    SalesNbEstimate = SalesValuesTag[3].text
-    SalesMean = SalesValuesTag[5].text
-    SalesHigh = SalesValuesTag[7].text
-    SalesLow = SalesValuesTag[9].text
-    Sales1YearAgo = SalesValuesTag[11].text
+    sales_nb_estimate = sales_values_tag[3].text
+    sales_mean = sales_values_tag[5].text
+    sales_high = sales_values_tag[7].text
+    sales_low = sales_values_tag[9].text
+    sales_1year_ago = sales_values_tag[11].text
 
-    SalesNbEstimate = Convert_To_Int_Or_Nan(SalesNbEstimate)
-    SalesMean = Convert_To_Float_With_Comma_Or_Nan(SalesMean)
-    SalesHigh = Convert_To_Float_With_Comma_Or_Nan(SalesHigh)
-    SalesLow = Convert_To_Float_With_Comma_Or_Nan(SalesLow)
-    Sales1YearAgo = Convert_To_Float_With_Comma_Or_Nan(Sales1YearAgo)
+    sales_nb_estimate = _convert_string_to_int_or_nan(sales_nb_estimate)
+    sales_mean = _convert_string_to_float_or_nan(sales_mean)
+    sales_high = _convert_string_to_float_or_nan(sales_high)
+    sales_low = _convert_string_to_float_or_nan(sales_low)
+    sales_1year_ago = _convert_string_to_float_or_nan(sales_1year_ago)
 
-    return [SalesNbEstimate, SalesMean, SalesHigh, SalesLow, Sales1YearAgo]
+    return [sales_nb_estimate, sales_mean, sales_high, sales_low, sales_1year_ago]
 
 
-def Get_Percent_Shares_Owned_From_Soup(soup):
+def get_percent_shares_owned_from_Soup(soup):
     # Alternative :
     # SharesOwnedTag = soup_LVMH.find(lambda tag: tag.name == "strong" and "Shares Owned" in tag.text)
     # SharesOwned = list(SharesOwnedTag.parent.parent.children)[3].text
@@ -73,49 +74,41 @@ def Get_Percent_Shares_Owned_From_Soup(soup):
     pattern = re.compile(r'Shares Owned')
     SharesOwned = soup.find("td", text=pattern).findNext("td").text[:-1]
 
-    SharesOwned = Convert_To_Float_Or_Nan(SharesOwned)
+    SharesOwned = _convert_string_to_float_or_nan(SharesOwned)
 
     return [SharesOwned]
 
 
-def Get_Dividend_Yield_From_Soup(soup):
-    DividendTag = soup.find(lambda tag: tag.name == "td" and "Dividend Yield" in tag.text)
-    DividendValuesTag = list(DividendTag.parent.children)
-    DividendCompany = DividendValuesTag[3].text
-    DividendIndustry = DividendValuesTag[5].text
-    DividendSector = DividendValuesTag[7].text
+def get_dividend_yield_from_soup(soup):
+    dividend_tag = soup.find(lambda tag: tag.name == "td" and "Dividend Yield" in tag.text)
+    dividend_values_tag = list(dividend_tag.parent.children)
+    dividend_company = dividend_values_tag[3].text
+    dividend_industry = dividend_values_tag[5].text
+    dividend_sector = dividend_values_tag[7].text
 
-    DividendCompany = Convert_To_Float_Or_Nan(DividendCompany)
-    DividendIndustry = Convert_To_Float_Or_Nan(DividendIndustry)
-    DividendSector = Convert_To_Float_Or_Nan(DividendSector)
+    dividend_company = _convert_string_to_float_or_nan(dividend_company)
+    dividend_industry = _convert_string_to_float_or_nan(dividend_industry)
+    dividend_sector = _convert_string_to_float_or_nan(dividend_sector)
 
-    return [DividendCompany, DividendIndustry, DividendSector]
+    return [dividend_company, dividend_industry, dividend_sector]
 
 
-def Convert_To_Float_Or_Nan(string):
-    if string is not "" and string != "--":
-        return float(string)
+def _convert_string_to_float_or_nan(string):
+    if string is not "" and string.find("-") == -1 :
+
+        return float(string.replace(",", ""))
+
+        #Alternative using locale to convert number with "," for thousands
+        #setlocale(LC_NUMERIC, "en_GB")
+        #floatNb = atof(string)
+        #setlocale(LC_NUMERIC, "")
+
     else:
         return NA
 
 
-def Convert_To_Float_With_Comma_Or_Nan(string):
-    # Use locale to convert string to float when comma separator for thousands are present
-    # alternative  : remove the "," character and cast to float
-    setlocale(LC_NUMERIC, "en_GB")
-
-    if string is not "" and string != "--":
-        floatNb = atof(string)
-
-        # returning to local locale
-        setlocale(LC_NUMERIC, "")
-
-        return floatNb
-    else:
-        return NA
-
-def Convert_To_Int_Or_Nan(string):
-    if string is not "" and string != "--":
+def _convert_string_to_int_or_nan(string):
+    if string is not "" and string.find("-") == -1:
         return int(string)
     else:
         return NA
@@ -123,41 +116,68 @@ def Convert_To_Int_Or_Nan(string):
 # -------------------------------------------------------------------------- #
 
 
-CompaniesDict = {"LVMH" :"LVMH.PA", "Airbus" :"AIR.PA", "Danone" : "DANO.PA"}
+CompaniesDict = {"LVMH": "LVMH.PA", "Airbus": "AIR.PA", "Danone": "DANO.PA"}
 CompaniesDataDict = {}
+CompaniesData2 = []
+now = datetime.now()
+dateDuJour = str(now.day) + "/" + str(now.month) + "/" + str(now.year)
 
+# used for the first DataFrame with information presented vertically
 InformationIndex = ["Sales - #Estimates",
                     "Sales - Mean",
                     "Sales - High",
                     "Sales - Low",
                     "Sales - 1 Year Ago",
-                    "Share price",
+                    "Share price" + " (" + dateDuJour + ")",
                     "Share percent change",
                     "% Shares owned",
                     "Dividend yield company",
                     "Dividend yield Industry",
                     "Dividend yield Sector"]
 
+# used to create the second DataFrame with info in columns
+InformationCol = ["Company",
+                  "Sales_NbEstimates",
+                  "Sales_Mean",
+                  "Sales_High",
+                  "Sales_Low",
+                  "Sales_1_year_ago",
+                  "Share_price",
+                  "Share_percent_change",
+                  "Shares_owned",
+                  "Dividend_yield_company",
+                  "Dividend_yield_industry",
+                  "Dividend_yield_sector"]
+
 for company in CompaniesDict.items():
 
-    soup = Get_Request_From_Company_and_Build_Soup(company[1])
+    soup = get_request_from_company_and_build_soup(company[1])
 
-    CompanyData = Get_Quarter_Sales_End_Dec2018_From_Soup(soup)
-    CompanyData = CompanyData + Get_Share_Price_And_Percent_Change_From_Soup(soup)
-    CompanyData = CompanyData + Get_Percent_Shares_Owned_From_Soup(soup)
-    CompanyData = CompanyData + Get_Dividend_Yield_From_Soup(soup)
+    CompanyData = get_quarter_sales_end_dec2018_from_soup(soup)
+    CompanyData = CompanyData + get_share_price_and_percent_change_from_soup(soup)
+    CompanyData = CompanyData + get_percent_shares_owned_from_Soup(soup)
+    CompanyData = CompanyData + get_dividend_yield_from_soup(soup)
 
     CompaniesDataDict[company[0]] = CompanyData
 
-CompaniesDataDF = pd.DataFrame( CompaniesDataDict,
-                                index = InformationIndex)
+    CompaniesData2.append([company[0]] + CompanyData)
+
+CompaniesDataDF = pd.DataFrame(CompaniesDataDict, index=InformationIndex)
+print("Informations Reuters pour 3 entreprises \
+dans un DataFrame vertical\n avec index sur les informations pour lisibilité")
 print(CompaniesDataDF)
+
+CompaniesDataDF2 = pd.DataFrame(CompaniesData2, columns=InformationCol)
+print("\nInformations Reuters pour 3 entreprises \
+dans un DataFrame horizontal\n avec les informations en colonnes pour les analyses")
+print(CompaniesDataDF2)
 
 
 class CrawlerTests(unittest.TestCase):
     def testConvToFloatWithComma(self):
-        self.assertEqual(Convert_To_Float_With_Comma_Or_Nan("123,456.7"), 123456.7)
-        #self.assertEqual(Convert_To_Float_With_Comma_Or_Nan(""), NA)
+        self.assertEqual(_convert_string_to_float_or_nan("123,456.7"), 123456.7)
+        #self.assertEqual(_convert_string_to_float_or_nan(""), NA)
+
 
 def main():
     unittest.main()
