@@ -2,6 +2,8 @@
 import requests
 import unittest
 from bs4 import BeautifulSoup
+import time
+from multiprocessing import Pool
 
 website_prefix = "http://www.purepeople.com"
 def _handle_request_result_and_build_soup(request_result):
@@ -24,7 +26,7 @@ def get_all_links_for_query(query):
   res = requests.post(url, data = {'q': query })
   soup = _handle_request_result_and_build_soup(res)
   specific_class = "c-article-flux__title"
-  all_links = list(map(lambda x : x.attrs['href'] , soup.find_all("a", class_= specific_class)))
+  all_links = map(lambda x : x.attrs['href'] , soup.find_all("a", class_= specific_class))
 
   return all_links
 
@@ -44,20 +46,34 @@ def get_popularity_for_people(people):
   return sum(results_people)
 
 
-class Lesson1Tests(unittest.TestCase):
-    def testShareCount(self):
-        self.assertEqual(get_share_count_for_page("http://www.purepeople.com/article/brigitte-macron-decroche-une-jolie-couv-a-l-etranger_a306389/1") , 177)
+#class Lesson1Tests(unittest.TestCase):
+    #def testShareCount(self):
+        #self.assertEqual(get_share_count_for_page("http://www.purepeople.com/article/brigitte-macron-decroche-une-jolie-couv-a-l-etranger_a306389/1") , 86)
 
-    def testConvertStringInt(self):
-        self.assertEqual(_convert_string_to_int("\n                            122\n                    ") , 122)
-        self.assertEqual(_convert_string_to_int("5,84K") , 5840)
-        self.assertEqual(_convert_string_to_int("\n                            1,6K\n                   ") , 1600)
+    #def testConvertStringInt(self):
+        #self.assertEqual(_convert_string_to_int("\n                            86\n                    ") , 86)
+        #self.assertEqual(_convert_string_to_int("5,84K") , 5840)
+        #self.assertEqual(_convert_string_to_int("\n                            1,6K\n                   ") , 1600)
 
-macron = get_popularity_for_people('macron')
-melenchon = get_popularity_for_people('melenchon')
+people = ['macron', 'melenchon','brigitte bardot']
 
-def main():
-    unittest.main()
+def measurePopularity():
+  start = time.time()
+  list(map(get_popularity_for_people, people))
+  end = time.time()
+  print('time', end - start)
 
-if __name__ == '__main__':
-    main()
+def measurePopularityParallel():
+  start = time.time()
+  p = Pool(5)
+  p.map(get_popularity_for_people, people)
+  end = time.time()
+  print('time', end - start)
+
+
+
+#def main():
+    #unittest.main()
+
+#if __name__ == '__main__':
+    #main()
