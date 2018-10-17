@@ -21,9 +21,8 @@ def get_request_from_url_and_build_soup(url):
 
 
 def get_request_from_url_and_build_json(url):
-    #auth = requests.get('https://api.github.com/jerkyhips', auth=HTTPBasicAuth('user', 'pass'))
-    #print(auth.status_code)
-    request = requests.get(url)
+    headers = {'Authorization' : 'token 9597e64b1c0c976a0cb925c070421b85464800a5'}
+    request = requests.get(url, headers=headers)
     jsonObject = json.loads(request.text)
     return jsonObject
 
@@ -56,15 +55,19 @@ url_api_profile = 'https://api.github.com/users/fabpot/repos'
 def get_starcount (url_api):
     response_object = get_request_from_url_and_build_json(url_api)
     nbstar = 0
-    for dico in response_object:
-       nbstar = nbstar + dico['stargazers_count']
-    return nbstar, nbstar/len(response_object)
+    if len(response_object)!= 0:
+        for dico in response_object:
+           nbstar = nbstar + dico['stargazers_count']
+        return nbstar, nbstar / len(response_object)
+    else:
+        # cas de 0 repository
+        return 0, 0
 
 liststar = []
 listmoy = []
 
 for name in df[2]:
-    linkApi = "https://api.github.com/users/" + name + "/repos"
+    linkApi = "https://api.github.com/users/" + name + "/repos?per_page=100"
     print(linkApi)
     total_star, moy_star = get_starcount(linkApi)
     liststar.append(total_star)
