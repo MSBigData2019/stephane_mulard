@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 import json
 import time
 import concurrent.futures
-from multiprocessing import Pool
+import urllib.request
 
 url_256_contributors = "https://gist.github.com/paulmillr/2657075"
 url_api_profile_test = 'https://api.github.com/users/fabpot/repos'
@@ -24,10 +24,14 @@ def get_request_from_url_and_build_soup(url):
 
 
 def get_request_from_url_and_build_json(url):
-    headers = {'Authorization' : 'token 2fdaf474421adf415e0c63fa36abcf9c70a4d2a4'}
+    headers = {'Authorization' : 'token mystery'}
     request = requests.get(url, headers=headers)
-    jsonObject = json.loads(request.text)
-    return jsonObject
+    if request.status_code == 200:
+        jsonObject = json.loads(request.text)
+        return jsonObject
+    else:
+        print("erreur requête json : ", str(request.status_code), request.text)
+        return
 
 
 def get_all_links_from_top256(url):
@@ -63,12 +67,20 @@ def get_nb_repos_for_account(url):
         # cas de 0 repository
         return 0
 
-def get_starcount_per_user(linkApiUser,nbRepos):
+
+def get_starcount_per_user(name):
+    linkApiUser = "https://api.github.com/users/" + name
+    nbRepos = get_nb_repos_for_account(linkApiUser)
     total_star = 0
     for i in range(1, nbRepos//100 + 2):
         linkApiRepos = linkApiUser + "/repos?page=" + str(i) + "&per_page=100"
         total_star = total_star + get_starcount_per_page(linkApiRepos)
-    return total_star
+
+    average_star_count = int(total_star / nbRepos) if nbRepos != 0 else 0
+    print("{} : {} repos --> {} stars, avg = {}".format(name, nbRepos, total_star, average_star_count))
+
+    return total_star, nbRepos
+
 
 ################# main #####################
 
@@ -81,37 +93,45 @@ print("time to retrieve the 256 links : {:.2f} seconds".format(round(end - start
 df = pd.DataFrame(all_links)
 df=df.T
 
-# Initialize lists
-listrepos = []
-liststar = []
-listmoy = []
-
-counter = 1
+# Initialize dictionary of data
+dictData = {}
 
 start = time.time()
-for name in df[2]:
-    linkApiUser = "https://api.github.com/users/" + name
-    nbRepos = get_nb_repos_for_account(linkApiUser)
 
-    total_star = get_starcount_per_user(linkApiUser,nbRepos)
+with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
 
-    average_star_count = int(total_star / nbRepos) if nbRepos != 0 else 0
-    print("{} - {} : {} repos --> {} stars, avg = {}".format(counter, name, nbRepos, total_star, average_star_count))
+    future_count_stars = {executor.submit(get_starcount_per_user, name): name for name in df[2]}
 
-    listrepos.append(nbRepos)
-    liststar.append(total_star)
-    listmoy.append(average_star_count)
-    counter += 1
+    for counter in concurrent.futures.as_completed(future_count_stars):
+        nameContributor = future_count_stars[counter]
+        try:
+            total_star, nbRepos = counter.result()
+        except Exception as exc:
+            print('%r generated an exception: %s' % (nameContributor, exc))
+        else:
+            average_star_count = int(total_star / nbRepos) if nbRepos != 0 else 0
+            dictData[nameContributor] = [nbRepos, total_star, average_star_count]
 
 end = time.time()
 print("time to count the stars for all 256 contributors : {:.2f} minutes".format((end - start)/60))
 
-# Adding the constructed lists to the DataFrame
-df['Nb repos'] = listrepos
-df['Total star'] = liststar
-df['Average'] = listmoy
+print(dictData)
 
-df.sort_values(by='Average',  ascending=False)
+ddata = pd.DataFrame(dictData)
+ddata = ddata.T
+ddata = ddata.rename({0:'nbrepos', 1:'Total Star', 2:'Average' },axis='columns')
+ddata = ddata.sort_values(by='Average',  ascending=False)
+ddata.to_csv("GithubTop256.csv")
 
-df.to_csv("GithubTop256.csv")
-
+# listrepos.append(nbRepos)
+# liststar.append(total_star)
+# listmoy.append(average_star_count)
+#
+# # Adding the constructed lists to the DataFrame
+# df['Nb repos'] = listrepos
+# df['Total star'] = liststar
+# df['Average'] = listmoy
+#
+# df.sort_values(by='Average',  ascending=False)
+#
+# df.to_csv("GithubTop256.csv")
