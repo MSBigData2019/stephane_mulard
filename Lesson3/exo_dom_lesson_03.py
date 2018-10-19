@@ -13,6 +13,8 @@ from multiprocessing import Pool
 url_256_contributors = "https://gist.github.com/paulmillr/2657075"
 url_api_profile_test = 'https://api.github.com/users/fabpot/repos'
 
+API_KEY = open("token.txt", "r").read()
+
 def get_request_from_url_and_build_soup(url):
     request = requests.get(url)
     if request.status_code == 200:
@@ -24,7 +26,7 @@ def get_request_from_url_and_build_soup(url):
 
 
 def get_request_from_url_and_build_json(url):
-    headers = {'Authorization' : 'token mystery'}
+    headers = {'Authorization': 'token ' + API_KEY}
     request = requests.get(url, headers=headers)
     jsonObject = json.loads(request.text)
     return jsonObject
