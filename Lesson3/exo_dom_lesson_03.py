@@ -24,7 +24,7 @@ def get_request_from_url_and_build_soup(url):
 
 
 def get_request_from_url_and_build_json(url):
-    headers = {'Authorization' : 'token 2fdaf474421adf415e0c63fa36abcf9c70a4d2a4'}
+    headers = {'Authorization' : 'token mystery'}
     request = requests.get(url, headers=headers)
     jsonObject = json.loads(request.text)
     return jsonObject
