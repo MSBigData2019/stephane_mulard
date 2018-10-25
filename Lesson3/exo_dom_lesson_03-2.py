@@ -41,7 +41,7 @@ def get_all_links_from_top256(url):
     info = soup.find_all("th", text=re.compile("#[0-9]"))
 
     all_links = list(map(lambda x : (x.get_text()[1:],
-                                      x.findNext("a").attrs['href'],
+                                      x.findNext("a"),
                                       x.findNext("a").get_text()), info))
 
     return list(zip(*all_links))

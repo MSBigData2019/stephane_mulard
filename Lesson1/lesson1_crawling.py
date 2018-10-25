@@ -66,7 +66,7 @@ def measurePopularity():
 def measurePopularityParallel():
   start = time.time()
   p = Pool(5)
-  p.map(get_popularity_for_people, people)
+  print(list(p.map(get_popularity_for_people, people)))
   end = time.time()
   print('time', end - start)
 
